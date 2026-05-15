@@ -2,9 +2,8 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>ピクトグラム制作ツール（3作品＋保存機能＋名前表示）</title>
+<title>ピクトグラム制作ツール（名前入り保存対応）</title>
 
-<!-- PDF生成ライブラリ -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <style>
@@ -31,8 +30,10 @@
 
 <h2>美術Ⅰ課題：ピクトグラム制作ツール</h2>
 
-<!-- クラス・番号（1年1組1番→1101）・名前入力欄 -->
-<label>クラス・番号（1年1組1番→1101）：<input id="classNum" type="text" style="width:80px;"></label>
+<!-- クラス番号（年・組・番号）＋名前 -->
+<label>年：<input id="year" type="number" min="1" max="3" style="width:60px;"></label>
+<label>組：<input id="class" type="number" min="1" max="9" style="width:60px;"></label>
+<label>番号：<input id="number" type="number" min="1" max="99" style="width:80px;"></label>
 <label>名前：<input id="studentName" type="text" style="width:150px;"></label>
 
 <br><br>
@@ -60,12 +61,11 @@
 // ====== 基本設定 ======
 const GRID = 5;
 const SIZE = 80;
-const TILE_COUNT = 30;  // tile0.png〜tile29.png
-const WORK_COUNT = 3;   // 歩く・走る・跳ぶ
+const TILE_COUNT = 30;
+const WORK_COUNT = 3;
 
 let selected = 0;
 
-// 3作品分のデータ
 let grids = [];
 let rots = [];
 let lastX = [-1, -1, -1];
@@ -84,7 +84,6 @@ for (let w = 0; w < WORK_COUNT; w++) {
   }
 }
 
-// ====== Canvas ======
 const gridCanvas = [
   document.getElementById("grid0"),
   document.getElementById("grid1"),
@@ -95,23 +94,16 @@ const gctx = gridCanvas.map(c => c.getContext("2d"));
 const paletteCanvas = document.getElementById("palette");
 const pctx = paletteCanvas.getContext("2d");
 
-// ====== タイル画像読み込み ======
 const tileImages = [];
-
 for (let i = 0; i < TILE_COUNT; i++) {
   const img = new Image();
-  img.src = `tile${i}.png`;  // tile0.png〜tile29.png
-
+  img.src = `tile${i}.png`;
   img.onload = () => drawAll();
-  img.onerror = () => {
-    console.warn(`画像が読み込めません: tile${i}.png`);
-    drawAll();
-  };
-
+  img.onerror = () => drawAll();
   tileImages.push(img);
 }
 
-// ====== グリッド描画 ======
+// ====== 描画 ======
 function drawGrid(w) {
   const ctx = gctx[w];
   ctx.clearRect(0, 0, 400, 400);
@@ -134,17 +126,14 @@ function drawGrid(w) {
       }
 
       ctx.restore();
-
       ctx.strokeStyle = "black";
       ctx.strokeRect(x * SIZE, y * SIZE, SIZE, SIZE);
     }
   }
 }
 
-// ====== パレット描画 ======
 function drawPalette() {
   pctx.clearRect(0, 0, 1200, 40);
-
   const cellWidth = 40;
 
   for (let i = 0; i < TILE_COUNT; i++) {
@@ -169,13 +158,12 @@ function drawPalette() {
   }
 }
 
-// ====== 全描画 ======
 function drawAll() {
   for (let w = 0; w < WORK_COUNT; w++) drawGrid(w);
   drawPalette();
 }
 
-// ====== グリッドクリック ======
+// ====== クリック処理 ======
 gridCanvas.forEach((canvas, w) => {
   canvas.addEventListener("click", (e) => {
     const rect = canvas.getBoundingClientRect();
@@ -191,7 +179,6 @@ gridCanvas.forEach((canvas, w) => {
   });
 });
 
-// ====== パレットクリック ======
 paletteCanvas.addEventListener("click", (e) => {
   const rect = paletteCanvas.getBoundingClientRect();
   const cellWidth = 40;
@@ -216,35 +203,41 @@ document.addEventListener("keydown", (e) => {
   }
 });
 
-// ====== 作品＋名前をまとめて描画 ======
+// ====== クラス番号を1101形式に変換 ======
+function getClassCode() {
+  const y = Number(document.getElementById("year").value);
+  const c = Number(document.getElementById("class").value);
+  const n = Number(document.getElementById("number").value);
+
+  if (!y || !c || !n) return "";
+
+  const num2 = String(n).padStart(2, "0"); // 1 → 01
+  return `${y}${c}${num2}`; // 1年1組1番 → 1101
+}
+
+// ====== 保存用キャンバス生成 ======
 function renderToCombinedCanvas() {
   const out = document.createElement("canvas");
   out.width = 1200;
   out.height = 550;
   const octx = out.getContext("2d");
 
-  // 背景白
   octx.fillStyle = "white";
   octx.fillRect(0, 0, out.width, out.height);
 
-  // 入力されたクラス番号と名前
-  const classNum = document.getElementById("classNum").value || "";
+  const classCode = getClassCode();
   const studentName = document.getElementById("studentName").value || "";
-  const infoText = `${classNum}　${studentName}`;
 
-  // 上部に生徒情報を描画
   octx.font = "28px sans-serif";
   octx.fillStyle = "black";
   octx.textAlign = "left";
-  octx.fillText(infoText, 20, 40);
+  octx.fillText(`${classCode}　${studentName}`, 20, 40);
 
-  // タイトル
   octx.textAlign = "center";
   octx.fillText("歩く", 200, 90);
   octx.fillText("走る", 600, 90);
   octx.fillText("跳ぶ", 1000, 90);
 
-  // グリッド画像
   octx.drawImage(gridCanvas[0], 0, 120);
   octx.drawImage(gridCanvas[1], 400, 120);
   octx.drawImage(gridCanvas[2], 800, 120);
@@ -255,44 +248,29 @@ function renderToCombinedCanvas() {
 // ====== PNG保存 ======
 document.getElementById("saveBtn").addEventListener("click", () => {
   const out = renderToCombinedCanvas();
-  try {
-    const dataURL = out.toDataURL("image/png");
-    const link = document.createElement("a");
-    link.download = "pictogram.png";
-    link.href = dataURL;
-    link.click();
-  } catch (err) {
-    alert("PNG保存に失敗しました。");
-  }
+  const dataURL = out.toDataURL("image/png");
+  const link = document.createElement("a");
+  link.download = "pictogram.png";
+  link.href = dataURL;
+  link.click();
 });
 
 // ====== PDF保存 ======
 document.getElementById("pdfBtn").addEventListener("click", () => {
   const out = renderToCombinedCanvas();
-  let imgData;
-  try {
-    imgData = out.toDataURL("image/png");
-  } catch (err) {
-    alert("PDF用画像の生成に失敗しました。");
-    return;
-  }
+  const imgData = out.toDataURL("image/png");
 
-  try {
-    const { jsPDF } = window.jspdf;
-    const pdf = new jsPDF({
-      orientation: "landscape",
-      unit: "px",
-      format: [1200, 600]
-    });
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({
+    orientation: "landscape",
+    unit: "px",
+    format: [1200, 600]
+  });
 
-    pdf.addImage(imgData, "PNG", 0, 0, 1200, 550);
-    pdf.save("pictogram.pdf");
-  } catch (err) {
-    alert("PDF保存に失敗しました。");
-  }
+  pdf.addImage(imgData, "PNG", 0, 0, 1200, 550);
+  pdf.save("pictogram.pdf");
 });
 
-// 初期描画
 drawAll();
 </script>
 </body>
