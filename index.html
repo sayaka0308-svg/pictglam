@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>ピクトグラム制作ツール（3作品＋保存機能）</title>
+<title>ピクトグラム制作ツール（3作品＋保存機能＋名前表示）</title>
 
 <!-- PDF生成ライブラリ -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -30,6 +30,12 @@
 <body>
 
 <h2>美術Ⅰ課題：ピクトグラム制作ツール</h2>
+
+<!-- クラス番号・名前入力欄 -->
+<label>クラス番号：<input id="classNum" type="text" style="width:80px;"></label>
+<label>名前：<input id="studentName" type="text" style="width:150px;"></label>
+
+<br><br>
 
 <div class="title-row">
   <div>歩く</div>
@@ -210,29 +216,38 @@ document.addEventListener("keydown", (e) => {
   }
 });
 
-// ====== 共通：タイトル＋3グリッドを1枚に描く関数 ======
+// ====== 作品＋名前をまとめて描画 ======
 function renderToCombinedCanvas() {
   const out = document.createElement("canvas");
   out.width = 1200;
-  out.height = 450;
+  out.height = 550;
   const octx = out.getContext("2d");
 
   // 背景白
   octx.fillStyle = "white";
   octx.fillRect(0, 0, out.width, out.height);
 
-  // タイトル
-  octx.font = "28px sans-serif";
-  octx.textAlign = "center";
-  octx.fillStyle = "black";
-  octx.fillText("歩く", 200, 30);
-  octx.fillText("走る", 600, 30);
-  octx.fillText("跳ぶ", 1000, 30);
+  // 入力されたクラス番号と名前
+  const classNum = document.getElementById("classNum").value || "";
+  const studentName = document.getElementById("studentName").value || "";
+  const infoText = `${classNum}　${studentName}`;
 
-  // グリッド
-  octx.drawImage(gridCanvas[0], 0, 50);
-  octx.drawImage(gridCanvas[1], 400, 50);
-  octx.drawImage(gridCanvas[2], 800, 50);
+  // 上部に生徒情報を描画
+  octx.font = "28px sans-serif";
+  octx.fillStyle = "black";
+  octx.textAlign = "left";
+  octx.fillText(infoText, 20, 40);
+
+  // タイトル
+  octx.textAlign = "center";
+  octx.fillText("歩く", 200, 90);
+  octx.fillText("走る", 600, 90);
+  octx.fillText("跳ぶ", 1000, 90);
+
+  // グリッド画像
+  octx.drawImage(gridCanvas[0], 0, 120);
+  octx.drawImage(gridCanvas[1], 400, 120);
+  octx.drawImage(gridCanvas[2], 800, 120);
 
   return out;
 }
@@ -247,8 +262,7 @@ document.getElementById("saveBtn").addEventListener("click", () => {
     link.href = dataURL;
     link.click();
   } catch (err) {
-    console.error(err);
-    alert("PNG保存に失敗しました。\nブラウザのセキュリティ設定や file:/// での実行が原因の可能性があります。");
+    alert("PNG保存に失敗しました。");
   }
 });
 
@@ -259,8 +273,7 @@ document.getElementById("pdfBtn").addEventListener("click", () => {
   try {
     imgData = out.toDataURL("image/png");
   } catch (err) {
-    console.error(err);
-    alert("PDF用画像の生成に失敗しました。\nブラウザのセキュリティ設定や file:/// での実行が原因の可能性があります。");
+    alert("PDF用画像の生成に失敗しました。");
     return;
   }
 
@@ -269,13 +282,12 @@ document.getElementById("pdfBtn").addEventListener("click", () => {
     const pdf = new jsPDF({
       orientation: "landscape",
       unit: "px",
-      format: [1200, 500]
+      format: [1200, 600]
     });
 
-    pdf.addImage(imgData, "PNG", 0, 0, 1200, 450);
+    pdf.addImage(imgData, "PNG", 0, 0, 1200, 550);
     pdf.save("pictogram.pdf");
   } catch (err) {
-    console.error(err);
     alert("PDF保存に失敗しました。");
   }
 });
