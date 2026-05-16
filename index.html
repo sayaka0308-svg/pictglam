@@ -1,41 +1,44 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
-<title>ピクトグラム制作ツール（名前入り保存対応）</title>
+  <meta charset="UTF-8">
+  <title>ピクトグラム制作ツール（3作品＋名前入り保存）</title>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <!-- PDF出力用 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
-<style>
-  body { font-family: sans-serif; }
-  .title-row {
-    display: flex;
-    justify-content: space-between;
-    width: 1200px;
-    margin-bottom: 10px;
-  }
-  .title-row div {
-    width: 400px;
-    text-align: center;
-    font-size: 22px;
-    font-weight: bold;
-  }
-  .grid-row {
-    display: flex;
-    gap: 10px;
-  }
-</style>
+  <style>
+    body { font-family: sans-serif; }
+    .title-row {
+      display: flex;
+      justify-content: space-between;
+      width: 1200px;
+      margin-bottom: 10px;
+    }
+    .title-row div {
+      width: 400px;
+      text-align: center;
+      font-size: 22px;
+      font-weight: bold;
+    }
+    .grid-row {
+      display: flex;
+      gap: 10px;
+    }
+  </style>
 </head>
 <body>
 
 <h2>美術Ⅰ課題：ピクトグラム制作ツール</h2>
 
 <!-- クラス番号（1101形式）＋名前 -->
-<label>クラス・番号（1年1組1番 → 1101 と入力）：  
+<label>クラス・番号（1年1組1番 → 1101 と入力）：
   <input id="classCode" type="text" style="width:120px;">
 </label>
 
-<label>名前：<input id="studentName" type="text" style="width:150px;"></label>
+<label>名前：
+  <input id="studentName" type="text" style="width:150px;">
+</label>
 
 <br><br>
 
@@ -56,4 +59,223 @@
 
 <br><br>
 <button id="saveBtn" style="font-size:18px; padding:10px 20px;">PNGで保存</button>
-<button id="pdfBtn" style="font-size:18px; padding:10px 20px;">
+<button id="pdfBtn"  style="font-size:18px; padding:10px 20px;">PDFで保存</button>
+
+<script>
+// ===== 基本設定 =====
+const GRID = 5;
+const SIZE = 80;
+const TILE_COUNT = 30;   // tile0.png ～ tile29.png
+const WORK_COUNT = 3;    // 3作品（歩く・走る・跳ぶ）
+
+let selected = 0;
+let currentWork = 0;     // 最後にクリックした作品（0,1,2）
+
+let grids = [];
+let rots  = [];
+let lastX = [-1, -1, -1];
+let lastY = [-1, -1, -1];
+
+for (let w = 0; w < WORK_COUNT; w++) {
+  grids[w] = [];
+  rots[w]  = [];
+  for (let y = 0; y < GRID; y++) {
+    grids[w][y] = [];
+    rots[w][y]  = [];
+    for (let x = 0; x < GRID; x++) {
+      grids[w][y][x] = 0;
+      rots[w][y][x]  = 0;
+    }
+  }
+}
+
+const gridCanvas = [
+  document.getElementById("grid0"),
+  document.getElementById("grid1"),
+  document.getElementById("grid2")
+];
+const gctx = gridCanvas.map(c => c.getContext("2d"));
+
+const paletteCanvas = document.getElementById("palette");
+const pctx = paletteCanvas.getContext("2d");
+
+// ===== タイル画像読み込み =====
+const tileImages = [];
+for (let i = 0; i < TILE_COUNT; i++) {
+  const img = new Image();
+  // ★同じフォルダにある tile0.png ～ tile29.png を読み込む
+  img.src = `tile${i}.png`;
+  img.onload  = () => drawAll();
+  img.onerror = () => drawAll(); // 読み込み失敗でも描画更新
+  tileImages.push(img);
+}
+
+// ===== 描画 =====
+function drawGrid(w) {
+  const ctx = gctx[w];
+  ctx.clearRect(0, 0, 400, 400);
+
+  for (let y = 0; y < GRID; y++) {
+    for (let x = 0; x < GRID; x++) {
+      const tileIndex = grids[w][y][x];
+      const angle     = rots[w][y][x];
+
+      ctx.save();
+      ctx.translate(x * SIZE + SIZE / 2, y * SIZE + SIZE / 2);
+      ctx.rotate(angle * Math.PI / 180);
+
+      const img = tileImages[tileIndex];
+      if (img && img.complete && img.naturalWidth > 0) {
+        ctx.drawImage(img, -SIZE / 2, -SIZE / 2, SIZE, SIZE);
+      } else {
+        ctx.fillStyle = "#ccc";
+        ctx.fillRect(-SIZE / 2, -SIZE / 2, SIZE, SIZE);
+      }
+
+      ctx.restore();
+      ctx.strokeStyle = "black";
+      ctx.strokeRect(x * SIZE, y * SIZE, SIZE, SIZE);
+    }
+  }
+}
+
+function drawPalette() {
+  pctx.clearRect(0, 0, 1200, 40);
+  const cellWidth = 40;
+
+  for (let i = 0; i < TILE_COUNT; i++) {
+    const x = i * cellWidth;
+    const img = tileImages[i];
+
+    if (img && img.complete && img.naturalWidth > 0) {
+      pctx.drawImage(img, x, 0, cellWidth, 40);
+    } else {
+      // 読み込めなかったタイルも「見える」ようにする
+      pctx.fillStyle = "#eee";
+      pctx.fillRect(x, 0, cellWidth, 40);
+      pctx.fillStyle = "#666";
+      pctx.font = "10px sans-serif";
+      pctx.textAlign = "center";
+      pctx.textBaseline = "middle";
+      pctx.fillText(i.toString(), x + cellWidth / 2, 20);
+    }
+
+    if (i === selected) {
+      pctx.strokeStyle = "red";
+      pctx.lineWidth = 3;
+      pctx.strokeRect(x + 2, 2, cellWidth - 4, 36);
+    } else {
+      pctx.strokeStyle = "black";
+      pctx.lineWidth = 1;
+      pctx.strokeRect(x, 0, cellWidth, 40);
+    }
+  }
+}
+
+function drawAll() {
+  for (let w = 0; w < WORK_COUNT; w++) drawGrid(w);
+  drawPalette();
+}
+
+// ===== グリッドクリック（どの作品かを記録） =====
+gridCanvas.forEach((canvas, w) => {
+  canvas.addEventListener("click", (e) => {
+    currentWork = w;  // ← ここで「今いじっている作品」を更新
+
+    const rect = canvas.getBoundingClientRect();
+    const x = Math.floor((e.clientX - rect.left) / SIZE);
+    const y = Math.floor((e.clientY - rect.top) / SIZE);
+
+    if (x >= 0 && x < GRID && y >= 0 && y < GRID) {
+      grids[w][y][x] = selected;
+      lastX[w] = x;
+      lastY[w] = y;
+      drawGrid(w);
+    }
+  });
+});
+
+// ===== パレットクリック =====
+paletteCanvas.addEventListener("click", (e) => {
+  const rect = paletteCanvas.getBoundingClientRect();
+  const cellWidth = 40;
+  const x = Math.floor((e.clientX - rect.left) / cellWidth);
+
+  if (x >= 0 && x < TILE_COUNT) {
+    selected = x;
+    drawPalette();
+  }
+});
+
+// ===== Rキーで回転（選択中の作品だけ） =====
+document.addEventListener("keydown", (e) => {
+  if (e.key === "r" || e.key === "R") {
+    const w = currentWork;
+    if (lastX[w] >= 0 && lastY[w] >= 0) {
+      rots[w][lastY[w]][lastX[w]] =
+        (rots[w][lastY[w]][lastX[w]] + 90) % 360;
+      drawGrid(w);
+    }
+  }
+});
+
+// ===== 保存用キャンバス生成 =====
+function renderToCombinedCanvas() {
+  const out = document.createElement("canvas");
+  out.width  = 1200;
+  out.height = 550;
+  const octx = out.getContext("2d");
+
+  octx.fillStyle = "white";
+  octx.fillRect(0, 0, out.width, out.height);
+
+  const classCode   = document.getElementById("classCode").value || "";
+  const studentName = document.getElementById("studentName").value || "";
+
+  octx.font = "28px sans-serif";
+  octx.fillStyle = "black";
+  octx.textAlign = "left";
+  octx.fillText(`${classCode}　${studentName}`, 20, 40);
+
+  octx.textAlign = "center";
+  octx.fillText("歩く",  200, 90);
+  octx.fillText("走る",  600, 90);
+  octx.fillText("跳ぶ", 1000, 90);
+
+  octx.drawImage(gridCanvas[0], 0,   120);
+  octx.drawImage(gridCanvas[1], 400, 120);
+  octx.drawImage(gridCanvas[2], 800, 120);
+
+  return out;
+}
+
+// ===== PNG保存 =====
+document.getElementById("saveBtn").addEventListener("click", () => {
+  const out = renderToCombinedCanvas();
+  const dataURL = out.toDataURL("image/png");
+  const link = document.createElement("a");
+  link.download = "pictogram.png";
+  link.href = dataURL;
+  link.click();
+});
+
+// ===== PDF保存 =====
+document.getElementById("pdfBtn").addEventListener("click", () => {
+  const out = renderToCombinedCanvas();
+  const imgData = out.toDataURL("image/png");
+
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({
+    orientation: "landscape",
+    unit: "px",
+    format: [1200, 600]
+  });
+
+  pdf.addImage(imgData, "PNG", 0, 0, 1200, 550);
+  pdf.save("pictogram.pdf");
+});
+
+drawAll();
+</script>
+</body>
+</html>
