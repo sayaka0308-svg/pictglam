@@ -1,31 +1,31 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <title>ピクトグラム制作ツール（3作品＋名前入り保存）</title>
+<meta charset="UTF-8">
+<title>ピクトグラム制作ツール（3作品＋名前入り保存）</title>
 
-  <!-- PDF出力用 -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<!-- PDF生成ライブラリ -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
-  <style>
-    body { font-family: sans-serif; }
-    .title-row {
-      display: flex;
-      justify-content: space-between;
-      width: 1200px;
-      margin-bottom: 10px;
-    }
-    .title-row div {
-      width: 400px;
-      text-align: center;
-      font-size: 22px;
-      font-weight: bold;
-    }
-    .grid-row {
-      display: flex;
-      gap: 10px;
-    }
-  </style>
+<style>
+  body { font-family: sans-serif; }
+  .title-row {
+    display: flex;
+    justify-content: space-between;
+    width: 1200px;
+    margin-bottom: 10px;
+  }
+  .title-row div {
+    width: 400px;
+    text-align: center;
+    font-size: 22px;
+    font-weight: bold;
+  }
+  .grid-row {
+    display: flex;
+    gap: 10px;
+  }
+</style>
 </head>
 <body>
 
@@ -99,12 +99,14 @@ const gctx = gridCanvas.map(c => c.getContext("2d"));
 const paletteCanvas = document.getElementById("palette");
 const pctx = paletteCanvas.getContext("2d");
 
-// ===== タイル画像読み込み =====
+// ===== タイル画像読み込み（GitHub Pages対応） =====
 const tileImages = [];
 for (let i = 0; i < TILE_COUNT; i++) {
   const img = new Image();
-  // ★同じフォルダにある tile0.png ～ tile29.png を読み込む
-  img.src = `tile${i}.png`;
+
+  // ★ GitHub Pages では必ず "./" をつける必要がある
+  img.src = `./tile${i}.png`;
+
   img.onload  = () => drawAll();
   img.onerror = () => drawAll(); // 読み込み失敗でも描画更新
   tileImages.push(img);
@@ -266,7 +268,7 @@ document.getElementById("pdfBtn").addEventListener("click", () => {
 
   const { jsPDF } = window.jspdf;
   const pdf = new jsPDF({
-    orientation: "landscape",
+    orientation: "landriage",
     unit: "px",
     format: [1200, 600]
   });
